@@ -4,13 +4,65 @@
   "namespace": "openpromptbook-v1",
   "registry_threshold": 1,
   "roles": {
-    "A": {"rank": 0, "may": ["submission", "test", "revocation"]},
-    "base": {"rank": 1, "may": ["submission", "test", "vote", "delegation", "revocation"]},
-    "regular": {"rank": 2, "may": ["submission", "test", "vote", "delegation", "revocation"]},
-    "reviewer": {"rank": 3, "may": ["submission", "test", "vote", "delegation", "revocation", "review"]},
-    "S": {"rank": 4, "may": ["submission", "test", "vote", "delegation", "revocation", "review", "quarantine", "checkpoint", "registry"]}
+    "A": {
+      "rank": 0,
+      "may": [
+        "submission",
+        "test",
+        "revocation"
+      ]
+    },
+    "base": {
+      "rank": 1,
+      "may": [
+        "submission",
+        "test",
+        "vote",
+        "delegation",
+        "revocation"
+      ]
+    },
+    "regular": {
+      "rank": 2,
+      "may": [
+        "submission",
+        "test",
+        "vote",
+        "delegation",
+        "revocation"
+      ]
+    },
+    "reviewer": {
+      "rank": 3,
+      "may": [
+        "submission",
+        "test",
+        "vote",
+        "delegation",
+        "revocation",
+        "review"
+      ]
+    },
+    "S": {
+      "rank": 4,
+      "may": [
+        "submission",
+        "test",
+        "vote",
+        "delegation",
+        "revocation",
+        "review",
+        "quarantine",
+        "checkpoint",
+        "registry"
+      ]
+    }
   },
-  "delegable": ["submission", "test", "vote"],
+  "delegable": [
+    "submission",
+    "test",
+    "vote"
+  ],
   "delegation_max_days": 90,
   "max_future_skew_hours": 24,
   "max_sequencing_age_hours": 72,
@@ -19,7 +71,25 @@
     "min_nonauthor_passing_tests": 1,
     "test_min_role": "base",
     "min_approvals": 2,
-    "required_review_scopes": ["security"]
+    "required_review_scopes": [
+      "security"
+    ]
   },
-  "front_page_size": 20
+  "front_page_size": 20,
+  "approval": {
+    "active_window_days": 90,
+    "active_min_role": "base",
+    "active_event_types": [
+      "submission",
+      "test",
+      "review",
+      "vote"
+    ],
+    "quorum_numerator": 1,
+    "quorum_denominator": 3,
+    "min_voters": 3,
+    "up_min_score": 4,
+    "down_max_score": 2,
+    "min_open_hours": 72
+  }
 }

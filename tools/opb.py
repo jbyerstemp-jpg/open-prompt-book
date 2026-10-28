@@ -594,6 +594,17 @@ class Registry:
                 raise OPBError(f"{t} events may never be delegated to agents")
         if p["admission"].get("test_min_role") not in p["roles"]:
             raise OPBError("admission.test_min_role must name a role")
+        ap = p.get("approval")
+        need = ("active_window_days", "active_min_role", "active_event_types", "quorum_numerator",
+                "quorum_denominator", "min_voters", "up_min_score", "down_max_score", "min_open_hours")
+        if not isinstance(ap, dict) or any(k not in ap for k in need):
+            raise OPBError("policy.json approval section is missing or incomplete")
+        if ap["active_min_role"] not in p["roles"]:
+            raise OPBError("approval.active_min_role must name a role")
+        if not (0 < ap["quorum_numerator"] <= ap["quorum_denominator"]) or ap["min_voters"] < 1:
+            raise OPBError("approval quorum settings are invalid")
+        if not (0 <= ap["down_max_score"] < ap["up_min_score"] <= 5):
+            raise OPBError("approval score lines must satisfy 0 <= down_max < up_min <= 5")
 
     def _add_member(self, m) -> None:
         if not isinstance(m, dict):
@@ -952,9 +963,32 @@ def check_state(state_path: str | None, reg: Registry, log: list, latest) -> tup
 # Tally: turn valid events into entry status, next steps and a front page
 # --------------------------------------------------------------------------
 
-def tally(reg: Registry, events: list) -> dict:
+def active_members(reg: Registry, events: list, now: dt.datetime) -> set:
+    """Members who count toward majority votes right now.
+
+    Active = Base tier or higher, not suspended, and signed at least one
+    valid, non-withdrawn submission, test, review or vote (directly or
+    through their agent) within the activity window. Computed only from
+    signed records, so every verifier gets the same answer.
+    """
+    ap = reg.policy["approval"]
+    floor = reg.rank(ap["active_min_role"])
+    since = now - dt.timedelta(days=ap["active_window_days"])
+    out = set()
+    for e in events:
+        if (e.valid and not e.withdrawn_by and e.etype in ap["active_event_types"]
+                and since <= e.created <= now + dt.timedelta(hours=reg.policy["max_future_skew_hours"])):
+            m = reg.members[e.actor]
+            if m.get("status", "active") == "active" and reg.rank(m["role"]) >= floor:
+                out.add(e.actor)
+    return out
+
+
+def tally(reg: Registry, events: list, now: dt.datetime) -> dict:
     adm = reg.policy["admission"]
+    ap = reg.policy["approval"]
     test_rank = reg.rank(adm["test_min_role"])
+    active = active_members(reg, events, now)
     versions = {}  # (entry_id, hex) -> list of events (in order)
     for e in events:
         if e.valid and not e.withdrawn_by and e.subject_name.startswith("entry:"):
@@ -979,15 +1013,36 @@ def tally(reg: Registry, events: list) -> dict:
                     out[e.actor] = e
             return out
 
-        votes = {a: e for a, e in latest_per_actor("vote").items() if a != author}
+        # --- votes: one per member, author excluded, only active members count
+        all_votes = {a: e for a, e in latest_per_actor("vote").items() if a != author}
+        votes = {a: e for a, e in all_votes.items() if a in active}
         dist = [0] * 6
         for e in votes.values():
             dist[e.predicate["score"]] += 1
         count = len(votes)
+        up = sum(dist[ap["up_min_score"]:])
+        down = sum(dist[:ap["down_max_score"] + 1])
+        neutral = count - up - down
         mean = round(sum(i * n for i, n in enumerate(dist)) / count, 2) if count else None
+        eligible = len(active - {author})
+        quorum = max(ap["min_voters"],
+                     -(-eligible * ap["quorum_numerator"] // ap["quorum_denominator"]))  # ceiling
+        down_reasons = {}
+        for e in votes.values():
+            if e.predicate["score"] <= ap["down_max_score"]:
+                r = e.predicate["reason"]
+                down_reasons[r] = down_reasons.get(r, 0) + 1
+        opens_until = (parse_time(info["submitted_at"]) + dt.timedelta(hours=ap["min_open_hours"])
+                       if subs else None)
         info["votes"] = {"count": count, "mean": mean, "distribution": dist,
-                         "excluded_author_vote": author in latest_per_actor("vote")}
+                         "up": up, "down": down, "neutral": neutral,
+                         "inactive_votes_not_counted": len(all_votes) - count,
+                         "excluded_author_vote": author in latest_per_actor("vote"),
+                         "active_eligible_voters": eligible, "quorum": quorum,
+                         "down_reasons": dict(sorted(down_reasons.items(), key=lambda kv: -kv[1])),
+                         "voting_open_until": fmt_time(opens_until) if opens_until else None}
 
+        # --- tests and reviews (the safety gate)
         tests = latest_per_actor("test")
         counted = {a: e for a, e in tests.items() if reg.rank(reg.members[a]["role"]) >= test_rank}
         passing = sorted(a for a, e in counted.items() if e.predicate["result"] == "pass")
@@ -1011,32 +1066,52 @@ def tally(reg: Registry, events: list) -> dict:
 
         steps = []
         if not subs:
-            status = "not_submitted"
+            status, shelf = "not_submitted", None
             steps.append("No submission statement exists for this exact version.")
         elif quarantine == "quarantine":
-            status = "quarantined"
+            status, shelf = "quarantined", "quarantined"
             steps.append("A steward quarantined this version while a concern is investigated.")
         elif blocks:
-            status = "blocked"
+            status, shelf = "blocked", "blocked"
             steps.append("A reviewer blocked this version. Fix the concern and submit a new version.")
         else:
             missing_scopes = [s for s in adm["required_review_scopes"] if s not in covered]
             if len(passing) < adm["min_passing_tests"]:
-                steps.append(f"Needs {adm['min_passing_tests'] - len(passing)} more passing test "
+                steps.append(f"Safety gate: needs {adm['min_passing_tests'] - len(passing)} more passing test "
                              f"report(s) from members at '{adm['test_min_role']}' tier or above.")
             if len(nonauthor_pass) < adm["min_nonauthor_passing_tests"]:
-                steps.append("Needs a passing test from someone other than the author.")
+                steps.append("Safety gate: needs a passing test from someone other than the author.")
             if len(approvals) < adm["min_approvals"]:
-                steps.append(f"Needs {adm['min_approvals'] - len(approvals)} more approving review(s) "
-                             "from independent reviewers.")
+                steps.append(f"Safety gate: needs {adm['min_approvals'] - len(approvals)} more approving "
+                             "review(s) from independent reviewers.")
             if missing_scopes:
-                steps.append(f"Needs an approving review covering: {', '.join(missing_scopes)}.")
+                steps.append(f"Safety gate: needs an approving review covering: {', '.join(missing_scopes)}.")
+            gate_passed = not steps
             if changes:
                 steps.append("Reviewers requested changes; consider submitting an improved version.")
-            status = "qualified" if not [s for s in steps if s.startswith("Needs")] else "submitted"
-            if status == "qualified":
-                steps.insert(0, "Qualified. Community votes decide its place on the front page.")
+            quorum_met = count >= quorum
+            still_open = opens_until is not None and now < opens_until
+            if gate_passed and quorum_met and not still_open and up * 2 > count:
+                status, shelf = "approved", "approved"
+                steps.insert(0, f"Approved by majority: {up} of {count} active voters rated it 4-5.")
+            elif quorum_met and count and down * 2 >= count:
+                status, shelf = "needs_work", "workbench"
+                top = ", ".join(f"{r} ({n})" for r, n in down_reasons.items())
+                steps.insert(0, f"Voters say it needs work: {down} of {count} rated it 0-2. Reasons: {top}.")
+            else:
+                status = "qualified" if gate_passed else "submitted"
+                shelf = "workbench"
+                if gate_passed:
+                    if still_open:
+                        steps.append(f"Voting stays open until {fmt_time(opens_until)} "
+                                     f"(minimum {ap['min_open_hours']} hours, so everyone gets a chance).")
+                    if not quorum_met:
+                        steps.append(f"Needs {quorum - count} more vote(s) from active members "
+                                     f"(quorum {quorum} of {eligible} eligible).")
+                    elif up * 2 <= count:
+                        steps.append(f"Needs a majority of 4-5 votes: currently {up} of {count}.")
         info["status"] = status
+        info["shelf"] = shelf
         info["next_steps"] = steps
         entries.setdefault(entry_id, []).append(info)
 
@@ -1046,13 +1121,15 @@ def tally(reg: Registry, events: list) -> dict:
         submitted = [i for i in infos if i["submitted"]]
         for older, newer in zip(submitted, submitted[1:]):
             older["superseded_by"] = newer["digest"]
-        qualified = [i for i in submitted if i["status"] == "qualified"]
-        if qualified:
-            best = qualified[-1]
-            front.append({"entry_id": entry_id, "digest": best["digest"],
-                          "vote_mean": best["votes"]["mean"], "vote_count": best["votes"]["count"]})
-    front.sort(key=lambda f: (-(f["vote_mean"] or 0), -f["vote_count"], f["entry_id"]))
-    return {"entries": entries, "front_page": front[:reg.policy["front_page_size"]]}
+        approved = [i for i in submitted if i["status"] == "approved"]
+        if approved:
+            best = approved[-1]
+            v = best["votes"]
+            front.append({"entry_id": entry_id, "digest": best["digest"], "up": v["up"],
+                          "vote_count": v["count"], "vote_mean": v["mean"]})
+    front.sort(key=lambda f: (-f["up"] * 1000 // max(f["vote_count"], 1), -f["vote_count"], f["entry_id"]))
+    return {"entries": entries, "front_page": front[:reg.policy["front_page_size"]],
+            "active_members": len(active)}
 
 
 def working_copies(repo: Path, entries: dict) -> dict:
@@ -1114,7 +1191,8 @@ def analyze(repo: Path, root: str | None = None, state: str | None = None, now: 
     }
     report["invalid_events"] = [{"event": "sha256:" + e.digest, "file": e.source, "reason": e.reason}
                                 for e in events if not e.valid]
-    t = tally(reg, events)
+    t = tally(reg, events, now)
+    report["active_members"] = t["active_members"]
     if not show_text:
         for infos in t["entries"].values():
             for i in infos:
@@ -1167,11 +1245,15 @@ def print_report(report: dict) -> None:
         for entry_id in sorted(entries):
             for v in entries[entry_id]:
                 votes = v["votes"]
-                vote_text = f"{votes['mean']}/5 from {votes['count']}" if votes["count"] else "no votes"
+                vote_text = (f"{votes['up']} up / {votes['neutral']} neutral / {votes['down']} down "
+                             f"from {votes['count']} (quorum {votes['quorum']})")
                 title = f" \"{v['title']}\" (untrusted text)" if v.get("title") else ""
-                out.append(f"- {entry_id} {v['digest'][7:19]}{title}: {v['status'].upper()}")
-                out.append(f"    tests passing {v['tests']['passing']} (non-author {v['tests']['nonauthor_passing']}), "
-                           f"approvals {v['reviews']['approvals']} {v['reviews']['scopes_covered']}, votes {vote_text}")
+                shelf = f" [{v['shelf']}]" if v.get("shelf") else ""
+                out.append(f"- {entry_id} {v['digest'][7:19]}{title}: {v['status'].upper()}{shelf}")
+                out.append(f"    safety gate: tests passing {v['tests']['passing']} (non-author "
+                           f"{v['tests']['nonauthor_passing']}), approvals {v['reviews']['approvals']} "
+                           f"{v['reviews']['scopes_covered']}")
+                out.append(f"    votes: {vote_text}")
                 if v.get("superseded_by"):
                     out.append(f"    superseded by {v['superseded_by'][7:19]}")
                 for step in v["next_steps"]:
@@ -1184,12 +1266,13 @@ def print_report(report: dict) -> None:
         for k, w in pending:
             out.append(f"- {k}: {w.get('error') or w['next_step']}")
     out.append("")
-    out.append("FRONT PAGE")
+    out.append(f"APPROVED SHELF (front page) - {report.get('active_members', 0)} active member(s)")
     if report.get("front_page"):
         for n, f in enumerate(report["front_page"], 1):
-            out.append(f"{n}. {f['entry_id']} ({f['digest'][7:19]}) - {f['vote_mean']}/5 from {f['vote_count']} vote(s)")
+            out.append(f"{n}. {f['entry_id']} ({f['digest'][7:19]}) - {f['up']} of {f['vote_count']} "
+                       f"active voters rated it 4-5")
     else:
-        out.append("No qualified entries yet.")
+        out.append("Nothing approved yet. Everything is on the workbench.")
     out.append("")
     out.append(report["note"])
     print("\n".join(out))
@@ -1481,7 +1564,7 @@ def build_parser() -> argparse.ArgumentParser:
     def common(p, repo=True):
         if repo:
             p.add_argument("--repo", default=".", help="path to the book repository (default: .)")
-        p.add_argument("--now", help=argparse.SUPPRESS)
+        p.add_argument("--now", help="act as if it is this time (YYYY-MM-DDTHH:MM:SSZ), to reproduce a past result")
         return p
 
     p = common(sub.add_parser("verify", help="check every signature and rule; show status and next steps"))

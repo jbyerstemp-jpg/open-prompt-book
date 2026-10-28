@@ -26,9 +26,10 @@ your user.
 2. Look in `entries/`; read only the entry that fits.
 3. Walk them through its "Do it yourself" or "Use with AI" section in plain
    language. Point out its "Limits and safety" section.
-4. To tell them which entries are community-qualified, run
-   `python tools/opb.py verify --json` and read `front_page`. If you cannot
-   run code, say that you could not check qualification status.
+4. To tell them which entries are approved by the community, run
+   `python tools/opb.py verify --json` and read `front_page` (the Approved
+   shelf). Everything else is on the Workbench. If you cannot run code, say
+   that you could not check approval status.
 
 ## Evaluating a prompt someone brings you
 

@@ -20,7 +20,28 @@ community follows and reviews, but software does not yet enforce.
 Tier permissions are **[enforced]**. Membership itself is a list in
 `governance/members.json`, signed by stewards.
 
-## 2. Agents
+## 2. Active members
+
+The Approved shelf is decided by a majority of **active** members. **[enforced]**
+
+You are active if, within the **last 90 days**, you signed at least one
+valid submission, test, review or vote (your agents' signatures count for
+you), **and** you are Base tier or above and not suspended.
+
+Why this definition:
+
+- **Checkable.** It is computed only from signed records. Nobody can claim
+  to be active, and every verifier gets the same count.
+- **Resistant to fake accounts.** New A-tier accounts do not count until
+  a steward promotes them, so creating many accounts gains no votes.
+- **Equitable.** Ninety days lets people with little time or money take
+  part occasionally and still count.
+- **Self-adjusting.** People who drift away stop counting, so the
+  majority stays reachable and reflects the current community.
+
+Withdrawn (revoked) actions do not make anyone active.
+
+## 3. Agents
 
 - An AI agent acts only for a member, under a signed delegation naming its
   key, what it may sign (submission, test, vote), and an expiry of at most
@@ -30,7 +51,7 @@ Tier permissions are **[enforced]**. Membership itself is a list in
 - The member is responsible for everything their agents sign, and can
   revoke a delegation at any time, voiding what was signed under it. **[enforced]**
 
-## 3. Earning responsibility
+## 4. Earning responsibility
 
 Promotion is based on demonstrated value, never on activity counts, stars,
 followers, lines changed, money or popularity. **[process]**
@@ -51,12 +72,12 @@ suspension and removal is a recorded registry change with a reason, and
 can be appealed. **[process]** Security-review appointment requires
 demonstrated security-review ability, not just a good contribution record.
 
-## 4. Decisions
+## 5. Decisions
 
 | Decision | Who decides | Notice before it takes effect |
 | --- | --- | --- |
 | Fix with no change in meaning (typo, formatting) | One steward or reviewer | None |
-| Entry admission or behavior change | The qualification rules in BOOK_RULES §6 **[enforced]** | 72-hour comment period **[process]** |
+| Entry approval (Approved shelf) | Safety gate + majority of active members, BOOK_RULES §6 **[enforced]** | 72-hour minimum voting window **[enforced]** |
 | Membership or tier change | Steward-signed registry change **[enforced]** | 7 days, except removals for abuse **[process]** |
 | Policy or schema change (thresholds, fields, tiers) | Steward-signed registry change **[enforced]** | 7 days **[process]** |
 | Charter change, or adding/removing stewards | Two-thirds of stewards, at least 3 taking part **[process]** | 14 days **[process]** |
@@ -69,7 +90,7 @@ front page.
 Emergency powers are narrow: quarantine an entry or suspend a member while
 a concern is investigated. Never rewrite rules or appoint people.
 
-## 5. Bootstrap (where we are now)
+## 6. Bootstrap (where we are now)
 
 The book starts **founder-led**, and says so openly. One steward signs the
 registry (`registry_threshold: 1`), and `opb verify` prints that warning.
@@ -82,7 +103,7 @@ keys are appointed, `registry_threshold` is raised to 2, and the charter's
 two-thirds rule for steward changes takes full effect. This transition is
 recorded publicly. Steward terms are one year, renewable. **[process]**
 
-## 6. Changing the rules
+## 7. Changing the rules
 
 The rules will be wrong in ways we have not imagined. That is expected.
 
@@ -91,7 +112,7 @@ Every rule change:
 1. States the problem it solves and exactly what changes.
 2. Lists what it affects: entries, members, tools, agents.
 3. Includes updated tests when it changes what the tool enforces.
-4. Is proposed in a pull request and waits its notice period (§4).
+4. Is proposed in a pull request and waits its notice period (§5).
 5. Takes effect when stewards sign the new registry.
 
 Changes never silently rewrite history. If a new rule affects older
@@ -99,7 +120,7 @@ entries, that is recorded as a status change or advisory naming the
 affected versions. Agents that do not understand a new rule version must
 stop and say so, not guess.
 
-## 7. Continuity
+## 8. Continuity
 
 - Anyone may mirror the repository. Verification works on any copy.
 - Every role, key and decision is in the repository, not in someone's head.

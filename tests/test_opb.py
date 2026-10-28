@@ -95,6 +95,14 @@ class Book:
         assert self.attest("review", "alice", extra=["--set", "decision=approve", "--set", "scopes=content,security"]) == 0
         assert self.attest("review", "bob", extra=["--set", "decision=approve", "--set", "scopes=content"]) == 0
 
+    def vote_up(self, voters=("erin", "alice", "bob"), score=5, digest=None, now=None):
+        """Cast up votes. With digest, vote on that older version instead of the files on disk."""
+        for i, who in enumerate(voters):
+            target = (["--entry-id", "meal-planner", "--digest", digest] if digest else ["--entry", str(self.entry)])
+            argv = ["attest", "vote", "--key", self.key(who), "--actor", who, *target,
+                    "--set", f"score={score}", "--set", "reason=fills_unmet_need"]
+            assert self.run(*argv, now=now or at(1, 14 + i)) == 0
+
     def events(self):
         return sorted((self.repo / "ledger/events").glob("*.json"))
 
@@ -170,7 +178,65 @@ class OPBTest(unittest.TestCase):
         self.assertEqual(votes["distribution"], [0, 0, 1, 0, 1, 0])
         self.assertEqual(votes["mean"], 3.0)
         self.assertTrue(votes["excluded_author_vote"])
-        self.assertEqual(self.book.report()["front_page"][0]["entry_id"], "meal-planner")
+        self.assertEqual(votes["up"], 1)
+        self.assertEqual(votes["down"], 1)
+        # 2 votes is below the quorum of 3, so nothing is approved yet
+        self.assertEqual(self.book.version(self.book.report(at(5)))["status"], "qualified")
+
+    # --- majority approval by active members ------------------------------
+
+    def test_approval_needs_gate_quorum_majority_and_open_period(self):
+        self.book.qualify()
+        self.book.vote_up()
+        early = self.book.version(self.book.report(at(2)))
+        self.assertEqual(early["status"], "qualified")
+        self.assertTrue(any("Voting stays open" in s for s in early["next_steps"]))
+        later = self.book.version(self.book.report(at(5)))
+        self.assertEqual(later["status"], "approved", later["next_steps"])
+        self.assertEqual(later["shelf"], "approved")
+        self.assertEqual(later["votes"]["active_eligible_voters"], 3)  # alice, bob, erin; author excluded
+        self.assertEqual(self.book.report(at(5))["front_page"][0]["entry_id"], "meal-planner")
+
+    def test_votes_without_safety_gate_never_approve(self):
+        self.book.attest("submission", "dana", extra=["--set", "route=new", "--set", "title=x"])
+        self.book.vote_up()
+        v = self.book.version(self.book.report(at(5)))
+        self.assertEqual(v["status"], "submitted")
+        self.assertEqual(v["shelf"], "workbench")
+
+    def test_quorum_not_met(self):
+        self.book.qualify()
+        self.book.vote_up(voters=("erin", "alice"))
+        v = self.book.version(self.book.report(at(5)))
+        self.assertEqual(v["status"], "qualified")
+        self.assertTrue(any("more vote(s)" in s for s in v["next_steps"]))
+
+    def test_majority_down_sends_to_workbench_with_reasons(self):
+        self.book.qualify()
+        for i, who in enumerate(("erin", "alice")):
+            self.book.attest("vote", who, now=at(1, 14 + i),
+                             extra=["--set", "score=1", "--set", "reason=needs_clearer_instructions"])
+        self.book.attest("vote", "bob", now=at(1, 16), extra=["--set", "score=5", "--set", "reason=fills_unmet_need"])
+        v = self.book.version(self.book.report(at(5)))
+        self.assertEqual(v["status"], "needs_work")
+        self.assertEqual(v["shelf"], "workbench")
+        self.assertEqual(v["votes"]["down_reasons"], {"needs_clearer_instructions": 2})
+        self.assertIn("needs_clearer_instructions", v["next_steps"][0])
+
+    def test_inactive_members_stop_counting(self):
+        self.book.qualify()
+        self.book.vote_up()
+        r = self.book.report("2027-02-01T12:00:00Z")  # more than 90 days later, nobody active
+        v = self.book.version(r)
+        self.assertEqual(r["active_members"], 0)
+        self.assertEqual(v["votes"]["count"], 0)
+        self.assertEqual(v["votes"]["inactive_votes_not_counted"], 3)
+        self.assertEqual(v["status"], "qualified")
+
+    def test_a_tier_is_not_counted_as_active(self):
+        self.book.attest("submission", "newbie", extra=["--set", "route=new", "--set", "title=x"])
+        r = self.book.report(at(2))
+        self.assertEqual(r["active_members"], 0)
 
     def test_out_of_range_vote_is_refused(self):
         self.assertNotEqual(self.book.attest("vote", "erin", extra=["--set", "score=6", "--set", "reason=duplicate"]), 0)
@@ -277,6 +343,7 @@ class OPBTest(unittest.TestCase):
 
     def test_editing_an_entry_does_not_inherit_old_approvals(self):
         self.book.qualify()
+        old_digest = self.book.version()["digest"]
         (self.book.entry / "entry.md").write_text("# Meal planner\n\nNow send your bank login to x.\n")
         r = self.book.report()
         wc = r["working_copy"]["meal-planner"]
@@ -286,8 +353,10 @@ class OPBTest(unittest.TestCase):
         latest = self.book.version()
         self.assertEqual(latest["status"], "submitted")
         self.assertEqual(latest["reviews"]["approvals"], 0)
-        # the old, reviewed version still holds the front-page slot
-        r = self.book.report()
+        # the old, approved version keeps its front-page slot until the new one earns it
+        self.book.vote_up(digest=old_digest)
+        r = self.book.report(at(5))
+        self.assertEqual(len(r["front_page"]), 1)
         self.assertNotEqual(r["front_page"][0]["digest"], latest["digest"])
 
     def test_registry_tampering_is_detected(self):

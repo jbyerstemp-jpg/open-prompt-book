@@ -87,28 +87,54 @@ stronger evidence, or out of scope. Not voting is abstaining, never a zero.
 The author's own vote is not counted. One person counts once, however many
 agents they use. The full distribution is shown, not just the average.
 
-Votes rank entries. They never qualify an entry on their own and never
+For deciding, votes group into three kinds:
+
+| Vote | Counts as |
+| --- | --- |
+| 4 or 5 | **Up**: near perfect |
+| 3 | **Neutral**: counts toward turnout, not toward either side |
+| 0, 1 or 2 | **Down**: needs work |
+
+Only votes from **active members** count (GOVERNANCE §2). Votes never
 override a safety concern.
 
-## 6. From submission to front page
+## 6. Two shelves: Approved and Workbench
 
 ```
-Submitted ──► Tested ──► Reviewed ──► Qualified ──► Front page (ranked by votes)
-                                │
-                     blocked / quarantined
+            ┌──────────── WORKBENCH ─────────────┐        ┌── APPROVED SHELF ──┐
+Submitted ──► Safety gate (tests + reviews) ──► Voting ──► Majority up ──► Front page
+                  │                                │  ▲                          │
+          blocked / quarantined             majority down ◄──── support falls ───┘
 ```
 
-A version **qualifies** when it has:
+**Step 1: the safety gate.** Before votes can approve anything, a version needs:
 
 - 2 passing tests from members (base tier or above), at least 1 not by the author;
 - 2 approving reviews from independent reviewers, not the author;
 - an approving review that covers **security**;
 - no blocking review and no quarantine.
 
-These numbers live in `governance/policy.json` and are checked by the tool,
-not by trust in whoever says so. Editing an entry creates a new version
-that needs its own tests and reviews; the reviewed version keeps its place
-until the new one qualifies.
+**Step 2: majority of active members.** A version that passed the gate
+moves to the **Approved shelf** (the front page) when all of these hold:
+
+- **Quorum:** at least one third of eligible active members voted, and
+  never fewer than 3 people. (Eligible means active, minus the author.)
+- **Majority:** more than half of the counted votes are up votes (4–5).
+- **Fair window:** at least 72 hours have passed since submission, so a
+  quick burst of votes cannot decide before others get a chance to look.
+
+**Moving down.** Once quorum is met, if half or more of the counted votes
+are down votes (0–2), the version is marked **needs work** and stays on, or
+returns to, the Workbench. The vote reasons tell the author what to fix.
+
+Everything else stays on the Workbench until it earns its place. Support
+is always counted from currently active members, so the shelf reflects
+today's community, not a vote from years ago.
+
+All numbers live in `governance/policy.json` and are recomputed by the
+tool from signed votes, so nobody has to be trusted to count. Editing an
+entry creates a new version that needs its own gate and votes; the
+approved version keeps its place until the new one earns it.
 
 ## 7. Evidence
 

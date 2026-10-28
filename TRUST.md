@@ -122,15 +122,27 @@ a new `spec_version`, a steward-signed registry, and the governance process.
 
 ## Counting rules
 
-- **Votes (0 to 5):** latest vote per member per exact version. The author's
-  own vote is excluded. Agents vote for their member; they never add votes.
+- **Active members:** Base tier or above, not suspended, with at least one
+  valid, non-withdrawn submission, test, review or vote dated within the
+  last 90 days (measured at verification time).
+- **Votes (0 to 5):** latest vote per member per exact version; the
+  author's vote is excluded; only active members' votes count. 4-5 is up,
+  3 neutral, 0-2 down. Agents vote for their member and never add votes.
 - **Tests:** latest result per member, counted from `test_min_role` upward.
-- **Reviews:** latest decision per reviewer; authors cannot review their own
-  version. One `block` blocks the version.
-- **Qualified:** enough passing tests (including a non-author), enough
+- **Reviews:** latest decision per reviewer; authors cannot review their
+  own version. One `block` blocks the version.
+- **Safety gate:** enough passing tests (including a non-author), enough
   independent approvals, and the required review scopes (security by default).
-- **Front page:** for each entry, the newest qualified, non-quarantined
-  version, ranked by vote average, then vote count.
+- **Approved:** passed the gate, at least 72 hours since submission, quorum
+  met (one third of eligible active members, minimum 3), and more than
+  half of counted votes are up.
+- **Needs work:** quorum met and half or more of counted votes are down.
+- **Front page:** for each entry, the newest approved, non-quarantined
+  version, ranked by share of up votes, then number of votes.
+
+Because activity is measured at verification time, results can change as
+time passes even with no new events. Verify with a fixed `--now` to
+reproduce a past result exactly.
 
 ## Agents
 

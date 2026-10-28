@@ -3,7 +3,7 @@
     {
       "id": "founder",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBSAwfi947oIjJ0jk0CGnZV1mUDnlBt6xvOKtMlMSLME founder"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPKBcG5cxSDNmkLcS4BbFJd+zrVld549xRTq/oCdyntg founder"
       ],
       "note": "Fictional demo steward.",
       "review_scopes": [
@@ -19,7 +19,7 @@
       "role": "reviewer",
       "status": "active",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFSfknRZBtwmDeGjoeUHXo7qbGM53cLb532NpY+k8xA1 alice-demo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEUc/y4krozLF1KK00l3/KCwLMLKSwExw/nP2pHLfFI9 alice-demo"
       ],
       "note": "Fictional demo member.",
       "review_scopes": [
@@ -32,7 +32,7 @@
       "role": "reviewer",
       "status": "active",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIANTZrvWN9yyw/vFzerP6QRs3z7AXXpcw4WlLM+vw0uO bob-demo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIIVvHu3/j7hojhMxXwL2XpEE/H9VK/YIuRMNtOKqZ4yr bob-demo"
       ],
       "note": "Fictional demo member.",
       "review_scopes": [
@@ -44,7 +44,7 @@
       "role": "base",
       "status": "active",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJM2xLAO70BkKm9HpS6x6R97PHDp68cdCqiF+F4mTYFs dana-demo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHfUxxRmlAAN88MQrPL6d0mz3V/VblBmdy8Twsrcgzpa dana-demo"
       ],
       "note": "Fictional demo member."
     },
@@ -53,7 +53,7 @@
       "role": "base",
       "status": "active",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSh+EZUEfE73wQiCB8GbAXucKvnfTWhVuwymDSw8IIQ erin-demo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICs+/TRPpoE7l1pTvfLgjAhpzwbGILTq2uRSOeoQb+mC erin-demo"
       ],
       "note": "Fictional demo member."
     },
@@ -62,7 +62,7 @@
       "role": "A",
       "status": "active",
       "keys": [
-        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFtiwONDHrZ1dByqkMDwfekrVd+pPs/4TGU+WFnMD91 sam-demo"
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHcYZIS1tTDdu7ZlLUW0nZ3IMRdsD8DsTBCVuopDyECJ sam-demo"
       ],
       "note": "Fictional demo member."
     }

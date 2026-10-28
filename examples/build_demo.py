@@ -69,7 +69,19 @@ None.
 """
 
 
+# The story is set 5 days ago, so the 72-hour voting window has already passed.
+START = opb.now_utc() - opb.dt.timedelta(days=5)
+_clock = [0]
+
+
+def stamp():
+    _clock[0] += 1
+    return opb.fmt_time(START + opb.dt.timedelta(minutes=_clock[0]))
+
+
 def quiet(argv):
+    if argv[0] in ("init", "registry-sign", "attest", "sequence"):
+        argv = argv + ["--now", stamp()]
     with contextlib.redirect_stdout(io.StringIO()) as out, contextlib.redirect_stderr(io.StringIO()) as err:
         code = opb.main(argv)
     if code != 0:
@@ -131,12 +143,13 @@ def main():
                "limitations=Text-only review; no tools involved.")
         attest("review", "bob", None, "meal-planner", "decision=approve", "scopes=content")
 
-        expires = opb.fmt_time(opb.now_utc() + opb.dt.timedelta(days=30))
+        expires = opb.fmt_time(START + opb.dt.timedelta(days=60))
         attest("delegation", "erin", None, None, "agent_name=Erin's assistant", "scopes=vote,test",
                f"expires={expires}", extra=["--agent-pubkey", key("erin-agent") + ".pub"])
         attest("vote", "erin-agent", "erin", "meal-planner", "score=5", "reason=fills_unmet_need")
         attest("vote", "alice", None, "meal-planner", "score=4", "reason=fills_unmet_need")
         attest("vote", "bob", None, "meal-planner", "score=4", "reason=fills_unmet_need")
+        attest("vote", "founder", None, "meal-planner", "score=3", "reason=useful_variant",)
 
         attest("submission", "erin", None, "plain-language-explainer", "route=new", "title=Plain-language explainer")
         attest("test", "erin", None, "plain-language-explainer", "result=pass", "environment=Chat model, text only")
@@ -155,6 +168,9 @@ def main():
             "python tools/opb.py verify --repo examples/demo-collection \\\n"
             "  --root $(cat examples/demo-collection/DEMO_ROOT.txt)\n"
             "```\n\n"
+            "The demo's votes are dated when it was built. Members stop counting as\n"
+            "active 90 days after their last action, so rebuild it with\n"
+            "`python examples/build_demo.py` if the meal planner drops off the shelf.\n\n"
             "Then change one letter in `entries/meal-planner/entry.md` and run it\n"
             "again: the qualified version stays on the front page, and the edit is\n"
             "reported as an unsubmitted change.\n")
