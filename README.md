@@ -63,13 +63,24 @@ published until you approve a pull request. Agent rules: [AGENTS.md](AGENTS.md).
 4. Commit, push, and sign submissions with `attest`. Seal accepted events
    with `python tools/opb.py sequence --key ~/.ssh/id_ed25519 --actor <your-id>`.
 
+## The rules
+
+| Document | What it covers |
+| --- | --- |
+| [CHARTER.md](CHARTER.md) | Why the book exists and its ten principles |
+| [BOOK_RULES.md](BOOK_RULES.md) | What belongs, entry format, the 0-5 vote, how entries qualify |
+| [GOVERNANCE.md](GOVERNANCE.md) | Tiers A to S, agents, decisions, changing the rules |
+| [SECURITY.md](SECURITY.md) | What protects users, and how to report a problem |
+| [TRUST.md](TRUST.md) | The cryptography, exactly |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | How to help |
+
 ## Status
 
 Version 0.1, founder-led bootstrap. Built: signing, verification, 0-5
 voting, independent-review admission, agent delegation, revocation,
 quarantine, key rotation, and tamper-evident history. Not yet built:
-independent mirrors and witnesses, multi-steward governance, and the
-written charter and community rules. See "Known limits" in TRUST.md.
+independent mirrors and witnesses, and multi-steward governance.
+See "Known limits" in TRUST.md.
 
 ## License
 
