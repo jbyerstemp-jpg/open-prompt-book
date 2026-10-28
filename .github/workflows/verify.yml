@@ -1,0 +1,48 @@
+name: verify
+
+# Runs on every pull request and on main. It reads the repository only:
+# no secrets, no write token, and it never runs code from entries.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      # Before going live, pin both actions to full commit SHAs.
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Cross-check signatures with OpenSSH
+        env:
+          OPB_REQUIRE_SSH: "1"
+        run: python tests/ssh_interop.py
+
+      - name: Verify the example collection
+        run: python tools/opb.py verify --repo examples/demo-collection --root "$(cat examples/demo-collection/DEMO_ROOT.txt)"
+
+      - name: Verify the book
+        # Set OPB_ROOT under Settings > Secrets and variables > Actions > Variables
+        # to the founder's key fingerprint. Contributors cannot change it from a pull request.
+        env:
+          OPB_ROOT: ${{ vars.OPB_ROOT }}
+        run: |
+          if [ -n "$OPB_ROOT" ]; then
+            python tools/opb.py verify --root "$OPB_ROOT"
+          else
+            echo "::warning::OPB_ROOT is not set; verifying without a pinned trust root"
+            python tools/opb.py verify
+          fi

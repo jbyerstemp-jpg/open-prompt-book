@@ -1,0 +1,70 @@
+{
+  "members": [
+    {
+      "id": "founder",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBSAwfi947oIjJ0jk0CGnZV1mUDnlBt6xvOKtMlMSLME founder"
+      ],
+      "note": "Fictional demo steward.",
+      "review_scopes": [
+        "content",
+        "security",
+        "accessibility"
+      ],
+      "role": "S",
+      "status": "active"
+    },
+    {
+      "id": "alice",
+      "role": "reviewer",
+      "status": "active",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFSfknRZBtwmDeGjoeUHXo7qbGM53cLb532NpY+k8xA1 alice-demo"
+      ],
+      "note": "Fictional demo member.",
+      "review_scopes": [
+        "content",
+        "security"
+      ]
+    },
+    {
+      "id": "bob",
+      "role": "reviewer",
+      "status": "active",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIANTZrvWN9yyw/vFzerP6QRs3z7AXXpcw4WlLM+vw0uO bob-demo"
+      ],
+      "note": "Fictional demo member.",
+      "review_scopes": [
+        "content"
+      ]
+    },
+    {
+      "id": "dana",
+      "role": "base",
+      "status": "active",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJM2xLAO70BkKm9HpS6x6R97PHDp68cdCqiF+F4mTYFs dana-demo"
+      ],
+      "note": "Fictional demo member."
+    },
+    {
+      "id": "erin",
+      "role": "base",
+      "status": "active",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICSh+EZUEfE73wQiCB8GbAXucKvnfTWhVuwymDSw8IIQ erin-demo"
+      ],
+      "note": "Fictional demo member."
+    },
+    {
+      "id": "sam",
+      "role": "A",
+      "status": "active",
+      "keys": [
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIKFtiwONDHrZ1dByqkMDwfekrVd+pPs/4TGU+WFnMD91 sam-demo"
+      ],
+      "note": "Fictional demo member."
+    }
+  ]
+}

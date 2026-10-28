@@ -1,0 +1,81 @@
+{
+  "spec_version": "0.1",
+  "max_event_bytes": 16384,
+  "common_fields": {
+    "actor": {"type": "id"},
+    "collection": {"type": "id"},
+    "created_at": {"type": "time"},
+    "policy_version": {"type": "text", "max": 16}
+  },
+  "types": {
+    "submission": {
+      "subject": "entry",
+      "fields": {
+        "route": {"type": "enum", "values": ["new", "improve", "variant"]},
+        "title": {"type": "text", "max": 120},
+        "supersedes": {"type": "digest", "optional": true}
+      }
+    },
+    "test": {
+      "subject": "entry",
+      "fields": {
+        "result": {"type": "enum", "values": ["pass", "partial", "fail"]},
+        "environment": {"type": "text", "max": 200},
+        "notes": {"type": "text", "max": 2000, "optional": true}
+      }
+    },
+    "review": {
+      "subject": "entry",
+      "fields": {
+        "decision": {"type": "enum", "values": ["approve", "request_changes", "block"]},
+        "scopes": {"type": "list", "values": ["content", "security", "accessibility"]},
+        "limitations": {"type": "text", "max": 2000, "optional": true}
+      }
+    },
+    "vote": {
+      "subject": "entry",
+      "fields": {
+        "score": {"type": "int", "min": 0, "max": 5},
+        "reason": {"type": "enum", "values": [
+          "fills_unmet_need", "improves_existing", "useful_variant",
+          "duplicate", "needs_clearer_instructions", "needs_stronger_evidence",
+          "out_of_scope"
+        ]},
+        "explanation": {"type": "text", "max": 1000, "optional": true}
+      }
+    },
+    "delegation": {
+      "subject": "key",
+      "fields": {
+        "agent_name": {"type": "text", "max": 60},
+        "scopes": {"type": "list", "values": ["submission", "test", "vote"]},
+        "expires": {"type": "time"}
+      }
+    },
+    "revocation": {
+      "subject": "event",
+      "fields": {
+        "reason": {"type": "text", "max": 500, "optional": true}
+      }
+    },
+    "quarantine": {
+      "subject": "entry",
+      "fields": {
+        "action": {"type": "enum", "values": ["quarantine", "release"]},
+        "reason": {"type": "text", "max": 500}
+      }
+    },
+    "registry": {
+      "subject": "files",
+      "fields": {
+        "note": {"type": "text", "max": 500, "optional": true}
+      }
+    },
+    "checkpoint": {
+      "subject": "log",
+      "fields": {
+        "size": {"type": "int", "min": 0, "max": 1000000000}
+      }
+    }
+  }
+}

@@ -1,0 +1,2 @@
+# Same bytes on every platform, so entry fingerprints match everywhere.
+* text=auto eol=lf
